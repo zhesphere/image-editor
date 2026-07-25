@@ -1152,7 +1152,6 @@ const dom = {
 // ==========================================================
 // Constants
 // ==========================================================
-const MAX_DISPLAY_DIM = 2048;
 const MAX_HISTORY = 10;
 
 // ==========================================================
@@ -1741,6 +1740,18 @@ class ImageEditor {
     this.updateUndoRedoButtons();
   }
 
+  // ======================== Display Scale ========================
+  getDisplayScale(fullW, fullH) {
+    const workspace = document.querySelector('#workspace');
+    // Available space: workspace size minus right padding for side panel
+    const availW = workspace.clientWidth - 320;
+    const availH = workspace.clientHeight;
+    // Fallback to viewport if workspace not yet laid out
+    const w = availW > 0 ? availW : (window.innerWidth - 320);
+    const h = availH > 0 ? availH : (window.innerHeight - 56);
+    return Math.min(1, w / fullW, h / fullH);
+  }
+
   // ======================== Image Loading ========================
   async loadImage(file) {
     try {
@@ -1770,8 +1781,8 @@ class ImageEditor {
       // Store original bitmap for compare view
       this.originalImageBitmap = await createImageBitmap(img);
 
-      // Calculate display dimensions
-      this.displayScale = Math.min(1, MAX_DISPLAY_DIM / Math.max(fullW, fullH));
+      // Calculate display dimensions to fit available workspace
+      this.displayScale = this.getDisplayScale(fullW, fullH);
       const displayW = Math.round(fullW * this.displayScale);
       const displayH = Math.round(fullH * this.displayScale);
 
@@ -1825,6 +1836,9 @@ class ImageEditor {
 
   // ======================== Display Update ========================
   async updateDisplay() {
+    // Recalculate display scale for current workspace size
+    this.displayScale = this.getDisplayScale(this.fullResData.width, this.fullResData.height);
+
     // Update display from fullResData
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = this.fullResData.width;
@@ -1979,7 +1993,7 @@ class ImageEditor {
     this.fullResData = croppedData;
 
     // Update display scale
-    this.displayScale = Math.min(1, MAX_DISPLAY_DIM / Math.max(this.fullResData.width, this.fullResData.height));
+    this.displayScale = this.getDisplayScale(this.fullResData.width, this.fullResData.height);
     this.cropManager.hide();
     this.cropManager.init(this.fullResData.width, this.fullResData.height, 0, 0);
     this.updateDisplay();
@@ -2439,6 +2453,19 @@ class ImageEditor {
 
     // Initialize brush cursor size
     this.inpaintEngine.setBrushSize(40);
+
+    // Window resize — recalculate display scale
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (!this.fullResData) return;
+        const newScale = this.getDisplayScale(this.fullResData.width, this.fullResData.height);
+        if (Math.abs(newScale - this.displayScale) > 0.01) {
+          this.updateDisplay();
+        }
+      }, 150);
+    });
   }
 }
 
