@@ -123,6 +123,10 @@ function canvasToBlob(source, type, quality, background) {
 }
 function exportOptions() { return { type:$('#format').value, quality:Number($('#quality').value) / 100, background:$('#background').value }; }
 function download(blob, name) { const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = name; link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000); }
+const crcTable = (() => { const table = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; table[n] = c >>> 0; } return table; })();
+function crc32(data) { let value = 0xffffffff; for (const byte of data) value = crcTable[(value ^ byte) & 255] ^ (value >>> 8); return (value ^ 0xffffffff) >>> 0; }
+function u16(value) { return Uint8Array.of(value & 255, value >>> 8 & 255); } function u32(value) { return Uint8Array.of(value & 255, value >>> 8 & 255, value >>> 16 & 255, value >>> 24 & 255); }
+function makeZip(entries) { const encoder = new TextEncoder(), chunks = [], directory = []; let offset = 0; for (const entry of entries) { const name = encoder.encode(entry.name), data = new Uint8Array(entry.data), crc = crc32(data); const local = [u32(0x04034b50),u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),name,data]; chunks.push(...local); directory.push([u32(0x02014b50),u16(20),u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset),name]); offset += local.reduce((sum, piece) => sum + piece.length, 0); } const dirStart = offset; directory.forEach(record => { chunks.push(...record); offset += record.reduce((sum,piece) => sum + piece.length,0); }); chunks.push(u32(0x06054b50),u16(0),u16(0),u16(entries.length),u16(entries.length),u32(offset-dirStart),u32(dirStart),u16(0)); return new Blob(chunks, {type:'application/zip'}); }
 async function exportOne(source = state.source, name = state.originalName) {
   const { type, quality, background } = exportOptions(); const blob = await canvasToBlob(source, type, quality, background);
   download(blob, `${baseName(name)}-orbitvo.${extension(type)}`); $('#export-estimate').textContent = `刚才导出：${bytes(blob.size)} · ${blob.type}`; return blob;
@@ -144,6 +148,12 @@ async function exportBatch() {
   }
   $('#export-batch').disabled = false; toast('批量导出已完成。浏览器可能会要求允许多个下载。', 'success');
 }
+async function exportZip() {
+  if (!state.batch.length) return toast('请先添加批量图片。', 'error');
+  const { type, quality, background } = exportOptions(), width = Number($('#width').value), height = Number($('#height').value), ratio = Number($('#crop-ratio').value) || 0, entries = [];
+  $('#export-zip').disabled = true;
+  try { for (const item of state.batch) { item.state = 'processing'; renderQueue(); const source = item.active ? state.source : item.canvas, dimensions = batchDimensions(source,width,height); const output = item.active ? source : cropToRatio(resizeCanvas(source,dimensions.width,dimensions.height,state.pendingRotation,state.pendingFlip),ratio); const blob = await canvasToBlob(output,type,quality,background); entries.push({name:`${baseName(item.file.name)}-orbitvo.${extension(type)}`,data:await blob.arrayBuffer()}); item.state = `done · ${bytes(blob.size)}`; renderQueue(); } const zip = makeZip(entries); download(zip, 'orbitvo-images.zip'); toast(`已打包 ${entries.length} 张图片：${bytes(zip.size)}。`, 'success'); } catch (error) { toast(error.message, 'error'); } finally { $('#export-zip').disabled = false; }
+}
 function dialog(title, body) {
   $('#dialog').innerHTML = `<header><h2 id="dialog-title">${title}</h2><button class="button small" data-close>关闭</button></header>${body}`;
   $('#dialog-backdrop').classList.add('open'); $('#dialog [data-close]').focus();
@@ -162,7 +172,7 @@ function bindEvents() {
   $('#rotate-left').onclick = () => { state.pendingRotation -= 90; toast('已加入左转，点击“应用尺寸与方向”确认。'); };
   $('#rotate-right').onclick = () => { state.pendingRotation += 90; toast('已加入右转，点击“应用尺寸与方向”确认。'); };
   $('#flip').onclick = () => { state.pendingFlip = !state.pendingFlip; toast('已切换镜像，点击“应用尺寸与方向”确认。'); };
-  $('#apply-size').onclick = applySize; $('#undo').onclick = undo; $('#redo').onclick = redo; $('#export').onclick = exportCurrent; $('#export-batch').onclick = exportBatch;
+  $('#apply-size').onclick = applySize; $('#undo').onclick = undo; $('#redo').onclick = redo; $('#export').onclick = exportCurrent; $('#export-batch').onclick = exportBatch; $('#export-zip').onclick = exportZip;
   $('#quality').oninput = event => $('#quality-value').value = event.target.value;
   $('#format').onchange = event => { const lossless = event.target.value === 'image/png'; $('#quality-field').classList.toggle('hidden', lossless); $('#background-field').classList.toggle('hidden', event.target.value !== 'image/jpeg'); };
   $('#queue').onclick = event => { const index = event.target.dataset.remove; if (index !== undefined) { state.batch.splice(Number(index), 1); renderQueue(); } };
