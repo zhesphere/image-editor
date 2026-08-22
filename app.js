@@ -6,7 +6,7 @@ const MAX_HISTORY_BYTES = 80 * 1024 * 1024;
 
 const state = {
   source: null, originalName: 'image', history: [], future: [], batch: [],
-  pendingRotation: 0, pendingFlip: false, view: { scale: 1, x: 0, y: 0 }, pointers: new Map(),
+  pendingRotation: 0, pendingFlip: false, view: { scale: 1, x: 0, y: 0 }, pointers: new Map(), crop: null, cropDrag: null,
 };
 
 function bytes(value) {
@@ -83,6 +83,9 @@ function cropToRatio(source, ratio) {
   const out = document.createElement('canvas'); out.width = width; out.height = height;
   out.getContext('2d').drawImage(source, x, y, width, height, 0, 0, width, height); return out;
 }
+function cropRectToCanvas(source, rect) { if (!rect) return source; const x=Math.round(rect.x*source.width), y=Math.round(rect.y*source.height), w=Math.max(1,Math.round(rect.w*source.width)), h=Math.max(1,Math.round(rect.h*source.height)); const out=document.createElement('canvas'); out.width=w; out.height=h; out.getContext('2d').drawImage(source,x,y,w,h,0,0,w,h); return out; }
+function resetCrop(ratio = Number($('#crop-ratio').value) || 0) { if (!state.source) return; let w=1,h=1,x=0,y=0; if (ratio) { if (state.source.width/state.source.height > ratio) { w=ratio/(state.source.width/state.source.height); x=(1-w)/2; } else { h=(state.source.width/state.source.height)/ratio; y=(1-h)/2; } } state.crop={x,y,w,h}; renderCrop(); }
+function renderCrop() { const overlay=$('#crop-overlay'), box=$('#crop-box'); if (!state.crop) return overlay.classList.add('hidden'); overlay.classList.remove('hidden'); Object.assign(box.style,{left:`${state.crop.x*100}%`,top:`${state.crop.y*100}%`,width:`${state.crop.w*100}%`,height:`${state.crop.h*100}%`}); }
 function batchDimensions(source, targetWidth, targetHeight) {
   if (!$('#lock-ratio').checked) return { width: targetWidth, height: targetHeight };
   const factor = Math.max(targetWidth, targetHeight) / Math.max(source.width, source.height);
@@ -93,8 +96,8 @@ function applySize() {
   const width = Number($('#width').value), height = Number($('#height').value);
   if (!Number.isFinite(width) || !Number.isFinite(height) || width < 1 || height < 1 || width > 16000 || height > 16000) return toast('尺寸需要在 1 到 16000 px 之间。', 'error');
   pushHistory(); const rotated = resizeCanvas(state.source, Math.round(width), Math.round(height), state.pendingRotation, state.pendingFlip);
-  state.source = cropToRatio(rotated, Number($('#crop-ratio').value) || 0);
-  state.pendingRotation = 0; state.pendingFlip = false; state.view = { scale:1, x:0, y:0 }; draw(); setControls(); toast('尺寸与方向已应用。', 'success');
+  state.source = cropRectToCanvas(rotated, state.crop);
+  state.pendingRotation = 0; state.pendingFlip = false; state.crop = null; $('#crop-overlay').classList.add('hidden'); state.view = { scale:1, x:0, y:0 }; draw(); setControls(); toast('尺寸与方向已应用。', 'success');
 }
 function updateRatio(event) {
   if (!state.source || !$('#lock-ratio').checked) return;
@@ -165,6 +168,7 @@ function setupPanZoom() {
   canvas.addEventListener('pointermove', event => { const previous = state.pointers.get(event.pointerId); if (!previous) return; state.view.x += event.clientX - previous.x; state.view.y += event.clientY - previous.y; state.pointers.set(event.pointerId, { x:event.clientX, y:event.clientY }); draw(); });
   ['pointerup','pointercancel'].forEach(type => canvas.addEventListener(type, event => state.pointers.delete(event.pointerId)));
 }
+function setupCrop() { const overlay=$('#crop-overlay'); $('#edit-crop').onclick=()=>resetCrop(); $('#crop-ratio').onchange=()=>state.crop&&resetCrop(); overlay.addEventListener('pointerdown',event=>{ if(!state.crop)return; const rect=overlay.getBoundingClientRect(), handle=event.target.dataset.handle; state.cropDrag={handle,startX:event.clientX,startY:event.clientY,rect:{...state.crop},width:rect.width,height:rect.height}; overlay.setPointerCapture(event.pointerId); }); overlay.addEventListener('pointermove',event=>{ const drag=state.cropDrag;if(!drag)return; const dx=(event.clientX-drag.startX)/drag.width,dy=(event.clientY-drag.startY)/drag.height; let {x,y,w,h}=drag.rect;if(!drag.handle){x=Math.max(0,Math.min(1-w,x+dx));y=Math.max(0,Math.min(1-h,y+dy));}else{if(drag.handle.includes('w')){x=Math.max(0,Math.min(x+w-.05,x+dx));w=drag.rect.w-(x-drag.rect.x);}if(drag.handle.includes('e'))w=Math.max(.05,Math.min(1-x,w+dx));if(drag.handle.includes('n')){y=Math.max(0,Math.min(y+h-.05,y+dy));h=drag.rect.h-(y-drag.rect.y);}if(drag.handle.includes('s'))h=Math.max(.05,Math.min(1-y,h+dy));}state.crop={x,y,w,h};renderCrop();}); ['pointerup','pointercancel'].forEach(type=>overlay.addEventListener(type,()=>state.cropDrag=null)); }
 function bindEvents() {
   $('#choose').onclick = () => $('#file-input').click(); $('#replace').onclick = () => $('#file-input').click(); $('#add-batch').onclick = () => $('#file-input').click();
   $('#file-input').onchange = event => { openFiles(event.target.files, !state.source); event.target.value = ''; };
@@ -181,6 +185,6 @@ function bindEvents() {
   $('#dialog-backdrop').onclick = event => { if (event.target === $('#dialog-backdrop') || event.target.dataset.close !== undefined) closeDialog(); };
   document.addEventListener('keydown', event => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redo() : undo(); } if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') { event.preventDefault(); exportCurrent(); } if (event.key === 'Escape') closeDialog(); });
   const dropzone = $('#dropzone'); ['dragenter','dragover'].forEach(type => dropzone.addEventListener(type, event => { event.preventDefault(); dropzone.classList.add('dragover'); })); ['dragleave','drop'].forEach(type => dropzone.addEventListener(type, event => { event.preventDefault(); dropzone.classList.remove('dragover'); })); dropzone.addEventListener('drop', event => openFiles(event.dataTransfer.files, !state.source)); dropzone.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') $('#file-input').click(); });
-  document.addEventListener('paste', event => { const files = [...event.clipboardData.files].filter(file => file.type.startsWith('image/')); if (files.length) openFiles(files, !state.source); }); setupPanZoom(); renderQueue(); setControls();
+  document.addEventListener('paste', event => { const files = [...event.clipboardData.files].filter(file => file.type.startsWith('image/')); if (files.length) openFiles(files, !state.source); }); setupPanZoom(); setupCrop(); renderQueue(); setControls();
 }
 bindEvents();
