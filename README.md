@@ -6,8 +6,9 @@
 
 - 导入 JPEG、PNG、WebP：点击、拖放和粘贴截图。
 - 单图：锁定比例缩放、居中比例裁剪、旋转、镜像、撤销/重做。
-- 导出：PNG、JPEG、WebP；JPEG/WebP 可调质量，JPEG 可选背景色；显示实际导出大小。
-- 批量：多图队列，沿用尺寸、比例裁剪与导出规则，逐张下载并报告失败项。
+- 导出：PNG、JPEG、WebP；可按质量百分比，或按目标文件大小（如 200 KB）自动压缩；JPEG 可选背景色；导出前预估体积。
+- 目标大小：优先降低 JPEG/WebP 质量；仍超限则等比缩小尺寸，适合表单上传上限。
+- 批量：多图队列，沿用尺寸、裁剪与压缩规则；支持逐张下载或打包 ZIP。
 - 隐私：上述功能只在本地浏览器中运行，不上传或持久保存图片。
 
 ## 云端 AI 的边界
@@ -39,6 +40,18 @@ python3 -m http.server 4173 --directory .
 - 大图受设备内存限制；历史记录总预算为约 80 MB，旧步骤会自动淘汰。
 - 批量下载由浏览器安全策略控制，首次可能需要允许多个下载。
 
-## 计划中的发布配置
+## 线上更新
 
-已在源码中准备域名：`img.orbitvo.com`（`CNAME`、canonical、robots、sitemap）。这不会绑定域名或改动 DNS；在获得部署与 DNS 的单独授权前，不进行任何外部账户操作。上线前仍需针对真实域名验证 DNS、TLS、HTTP、canonical、离线壳和 404。
+站点通过 **GitHub Pages** 发布，自定义域名为 [`img.orbitvo.com`](https://img.orbitvo.com/)（仓库根目录 `CNAME`）。
+
+仓库：`https://github.com/zhesphere/image-editor`
+
+更新步骤：
+
+```bash
+git add -A
+git commit -m "说明本次改动"
+git push origin main
+```
+
+推送到 `main` 后，GitHub Pages 会自动部署；通常一两分钟内可在域名上看到新版本。若浏览器仍显示旧页面，可强制刷新或清缓存。
