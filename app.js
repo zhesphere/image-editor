@@ -6,7 +6,7 @@ const MAX_HISTORY_BYTES = 80 * 1024 * 1024;
 
 const state = {
   source: null, originalName: 'image', history: [], future: [], batch: [],
-  pendingRotation: 0, pendingFlip: false, view: { scale: 1, x: 0, y: 0 }, pointers: new Map(), crop: null, cropDrag: null,
+  view: { scale: 1, x: 0, y: 0 }, pointers: new Map(), crop: null, cropDrag: null,
 };
 
 function bytes(value) {
@@ -22,7 +22,7 @@ function toast(message, type = '') {
 function setControls() {
   const ready = Boolean(state.source);
   $('#undo').disabled = !state.history.length; $('#redo').disabled = !state.future.length;
-  $('#export').disabled = !ready; $('#apply-size').disabled = !ready;
+  $('#export').disabled = !ready;
 }
 function stageSize() {
   const stage = $('#stage');
@@ -70,8 +70,20 @@ function restore(next, target) { target.push(cloneCanvas(state.source)); state.s
 function undo() { if (state.history.length) restore(state.history.pop(), state.future); }
 function redo() { if (state.future.length) restore(state.future.pop(), state.history); }
 function setSource(source, name) {
-  state.source = source; state.originalName = baseName(name); state.history = []; state.future = []; state.batch = []; state.pendingRotation = 0; state.pendingFlip = false;
+  state.source = source; state.originalName = baseName(name); state.history = []; state.future = []; state.batch = [];
+  state.crop = null; $('#crop-overlay').classList.add('hidden'); $('#edit-crop').textContent = '调整';
   $('#upload').classList.add('hidden');
+  requestAnimationFrame(() => { resetView(); setControls(); scheduleEstimate(); });
+}
+function commitImage(next) {
+  if (!state.source || !next) return;
+  pushHistory();
+  state.source = next;
+  state.crop = null;
+  $('#crop-overlay').classList.add('hidden');
+  $('#edit-crop').textContent = '调整';
+  const active = state.batch.find(item => item.active);
+  if (active) active.canvas = next;
   requestAnimationFrame(() => { resetView(); setControls(); scheduleEstimate(); });
 }
 async function decode(file) {
@@ -108,21 +120,64 @@ function cropToRatio(source, ratio) {
   out.getContext('2d').drawImage(source, x, y, width, height, 0, 0, width, height); return out;
 }
 function cropRectToCanvas(source, rect) { if (!rect) return source; const x=Math.round(rect.x*source.width), y=Math.round(rect.y*source.height), w=Math.max(1,Math.round(rect.w*source.width)), h=Math.max(1,Math.round(rect.h*source.height)); const out=document.createElement('canvas'); out.width=w; out.height=h; out.getContext('2d').drawImage(source,x,y,w,h,0,0,w,h); return out; }
-function resetCrop(ratio = Number($('#crop-ratio').value) || 0) { if (!state.source) return; let w=1,h=1,x=0,y=0; if (ratio) { if (state.source.width/state.source.height > ratio) { w=ratio/(state.source.width/state.source.height); x=(1-w)/2; } else { h=(state.source.width/state.source.height)/ratio; y=(1-h)/2; } } state.crop={x,y,w,h}; renderCrop(); }
-function renderCrop() { const overlay=$('#crop-overlay'), box=$('#crop-box'); if (!state.crop) return overlay.classList.add('hidden'); overlay.classList.remove('hidden'); Object.assign(box.style,{left:`${state.crop.x*100}%`,top:`${state.crop.y*100}%`,width:`${state.crop.w*100}%`,height:`${state.crop.h*100}%`}); }
+function resetCrop(ratio = Number($('#crop-ratio').value) || 0) {
+  if (!state.source) return;
+  let w = 1, h = 1, x = 0, y = 0;
+  if (ratio) {
+    if (state.source.width / state.source.height > ratio) { w = ratio / (state.source.width / state.source.height); x = (1 - w) / 2; }
+    else { h = (state.source.width / state.source.height) / ratio; y = (1 - h) / 2; }
+  }
+  state.crop = { x, y, w, h };
+  renderCrop();
+  $('#edit-crop').textContent = '完成';
+}
+function renderCrop() {
+  const overlay = $('#crop-overlay'), box = $('#crop-box');
+  if (!state.crop) return overlay.classList.add('hidden');
+  overlay.classList.remove('hidden');
+  Object.assign(box.style, { left: `${state.crop.x * 100}%`, top: `${state.crop.y * 100}%`, width: `${state.crop.w * 100}%`, height: `${state.crop.h * 100}%` });
+}
 function batchDimensions(source, targetWidth, targetHeight) {
   if (!$('#lock-ratio').checked) return { width: targetWidth, height: targetHeight };
   const factor = Math.max(targetWidth, targetHeight) / Math.max(source.width, source.height);
   return { width: Math.max(1, Math.round(source.width * factor)), height: Math.max(1, Math.round(source.height * factor)) };
 }
-function applySize() {
+function applyDimensions(width = Number($('#width').value), height = Number($('#height').value)) {
   if (!state.source) return;
-  const width = Number($('#width').value), height = Number($('#height').value);
-  if (!Number.isFinite(width) || !Number.isFinite(height) || width < 1 || height < 1 || width > 16000 || height > 16000) return toast('尺寸需要在 1 到 16000 px 之间。', 'error');
-  pushHistory(); const rotated = resizeCanvas(state.source, Math.round(width), Math.round(height), state.pendingRotation, state.pendingFlip);
-  state.source = cropRectToCanvas(rotated, state.crop);
-  state.pendingRotation = 0; state.pendingFlip = false; state.crop = null; $('#crop-overlay').classList.add('hidden');
-  requestAnimationFrame(() => { resetView(); setControls(); toast('尺寸与方向已应用。', 'success'); });
+  const w = Math.round(Number(width)), h = Math.round(Number(height));
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w < 1 || h < 1 || w > 16000 || h > 16000) return toast('尺寸需要在 1 到 16000 px 之间。', 'error');
+  if (w === state.source.width && h === state.source.height) return;
+  commitImage(resizeCanvas(state.source, w, h, 0, false));
+}
+function rotateBy(degrees) {
+  if (!state.source) return;
+  commitImage(resizeCanvas(state.source, state.source.width, state.source.height, degrees, false));
+}
+function flipHorizontal() {
+  if (!state.source) return;
+  commitImage(resizeCanvas(state.source, state.source.width, state.source.height, 0, true));
+}
+function applySelectedCrop() {
+  if (!state.source) return;
+  const ratio = Number($('#crop-ratio').value) || 0;
+  if (!ratio) return;
+  const next = cropToRatio(state.source, ratio);
+  if (next.width === state.source.width && next.height === state.source.height) return;
+  commitImage(next);
+}
+function finishCropEdit() {
+  if (!state.source || !state.crop) return;
+  const next = cropRectToCanvas(state.source, state.crop);
+  if (next.width === state.source.width && next.height === state.source.height) {
+    state.crop = null; $('#crop-overlay').classList.add('hidden'); $('#edit-crop').textContent = '调整';
+    return;
+  }
+  commitImage(next);
+}
+function toggleCropEdit() {
+  if (!state.source) return;
+  if (state.crop) finishCropEdit();
+  else resetCrop();
 }
 function updateRatio(event) {
   if (!state.source || !$('#lock-ratio').checked) return;
@@ -131,8 +186,9 @@ function updateRatio(event) {
   else $('#width').value = Math.max(1, Math.round(Number(input.value) * ratio));
 }
 function setLongEdge(value) {
-  if (!state.source) return; const factor = value / Math.max(state.source.width, state.source.height);
-  $('#width').value = Math.round(state.source.width * factor); $('#height').value = Math.round(state.source.height * factor);
+  if (!state.source) return;
+  const factor = value / Math.max(state.source.width, state.source.height);
+  applyDimensions(Math.round(state.source.width * factor), Math.round(state.source.height * factor));
 }
 function extension(type) { return type === 'image/jpeg' ? 'jpg' : type === 'image/webp' ? 'webp' : 'png'; }
 function canvasToBlob(source, type, quality, background) {
@@ -281,22 +337,22 @@ function renderQueue() {
     root.append(row);
   });
 }
-function prepareBatchItem(item, width, height, rotation, flip, cropRatio) {
+function prepareBatchItem(item, width, height, cropRatio) {
   const source = item.active ? state.source : item.canvas;
   if (item.active) return source;
   const dimensions = batchDimensions(source, width, height);
-  return cropToRatio(resizeCanvas(source, dimensions.width, dimensions.height, rotation, flip), cropRatio);
+  return cropToRatio(resizeCanvas(source, dimensions.width, dimensions.height, 0, false), cropRatio);
 }
 async function exportBatch() {
   if (!state.batch.length) return toast('请先添加批量图片。', 'error');
   const width = Number($('#width').value), height = Number($('#height').value);
-  const rotation = state.pendingRotation, flip = state.pendingFlip, cropRatio = Number($('#crop-ratio').value) || 0;
+  const cropRatio = Number($('#crop-ratio').value) || 0;
   $('#export-batch').disabled = true;
   let ok = 0;
   for (const item of state.batch) {
     try {
       item.state = 'processing'; renderQueue();
-      const processed = prepareBatchItem(item, width, height, rotation, flip, cropRatio);
+      const processed = prepareBatchItem(item, width, height, cropRatio);
       const blob = await exportOne(processed, item.file.name);
       item.state = `done · ${bytes(blob.size)}`;
       ok += 1;
@@ -314,7 +370,7 @@ async function exportZip() {
   try {
     for (const item of state.batch) {
       item.state = 'processing'; renderQueue();
-      const output = prepareBatchItem(item, width, height, state.pendingRotation, state.pendingFlip, ratio);
+      const output = prepareBatchItem(item, width, height, ratio);
       const result = await encodeImage(output, options);
       entries.push({ name: `${baseName(item.file.name)}-orbitvo.${extension(options.type)}`, data: await result.blob.arrayBuffer() });
       item.state = `done · ${bytes(result.blob.size)}`;
@@ -353,15 +409,49 @@ function setupPanZoom() {
     window.addEventListener('resize', () => { if (state.source) draw(); });
   }
 }
-function setupCrop() { const overlay=$('#crop-overlay'); $('#edit-crop').onclick=()=>resetCrop(); $('#crop-ratio').onchange=()=>state.crop&&resetCrop(); overlay.addEventListener('pointerdown',event=>{ if(!state.crop)return; const rect=overlay.getBoundingClientRect(), handle=event.target.dataset.handle; state.cropDrag={handle,startX:event.clientX,startY:event.clientY,rect:{...state.crop},width:rect.width,height:rect.height}; overlay.setPointerCapture(event.pointerId); }); overlay.addEventListener('pointermove',event=>{ const drag=state.cropDrag;if(!drag)return; const dx=(event.clientX-drag.startX)/drag.width,dy=(event.clientY-drag.startY)/drag.height; let {x,y,w,h}=drag.rect;if(!drag.handle){x=Math.max(0,Math.min(1-w,x+dx));y=Math.max(0,Math.min(1-h,y+dy));}else{if(drag.handle.includes('w')){x=Math.max(0,Math.min(x+w-.05,x+dx));w=drag.rect.w-(x-drag.rect.x);}if(drag.handle.includes('e'))w=Math.max(.05,Math.min(1-x,w+dx));if(drag.handle.includes('n')){y=Math.max(0,Math.min(y+h-.05,y+dy));h=drag.rect.h-(y-drag.rect.y);}if(drag.handle.includes('s'))h=Math.max(.05,Math.min(1-y,h+dy));}state.crop={x,y,w,h};renderCrop();}); ['pointerup','pointercancel'].forEach(type=>overlay.addEventListener(type,()=>state.cropDrag=null)); }
+function setupCrop() {
+  const overlay = $('#crop-overlay');
+  $('#edit-crop').onclick = toggleCropEdit;
+  $('#crop-ratio').onchange = () => {
+    if (!state.source) return;
+    if (state.crop) resetCrop();
+    else applySelectedCrop();
+  };
+  overlay.addEventListener('pointerdown', event => {
+    if (!state.crop) return;
+    const rect = overlay.getBoundingClientRect(), handle = event.target.dataset.handle;
+    state.cropDrag = { handle, startX: event.clientX, startY: event.clientY, rect: { ...state.crop }, width: rect.width, height: rect.height };
+    overlay.setPointerCapture(event.pointerId);
+  });
+  overlay.addEventListener('pointermove', event => {
+    const drag = state.cropDrag; if (!drag) return;
+    const dx = (event.clientX - drag.startX) / drag.width, dy = (event.clientY - drag.startY) / drag.height;
+    let { x, y, w, h } = drag.rect;
+    if (!drag.handle) {
+      x = Math.max(0, Math.min(1 - w, x + dx));
+      y = Math.max(0, Math.min(1 - h, y + dy));
+    } else {
+      if (drag.handle.includes('w')) { x = Math.max(0, Math.min(x + w - .05, x + dx)); w = drag.rect.w - (x - drag.rect.x); }
+      if (drag.handle.includes('e')) w = Math.max(.05, Math.min(1 - x, w + dx));
+      if (drag.handle.includes('n')) { y = Math.max(0, Math.min(y + h - .05, y + dy)); h = drag.rect.h - (y - drag.rect.y); }
+      if (drag.handle.includes('s')) h = Math.max(.05, Math.min(1 - y, h + dy));
+    }
+    state.crop = { x, y, w, h }; renderCrop();
+  });
+  ['pointerup', 'pointercancel'].forEach(type => overlay.addEventListener(type, () => { state.cropDrag = null; }));
+}
 function bindEvents() {
   $('#choose').onclick = () => $('#file-input').click(); $('#replace').onclick = () => $('#file-input').click(); $('#add-batch').onclick = () => $('#file-input').click();
   $('#file-input').onchange = event => { openFiles(event.target.files, !state.source); event.target.value = ''; };
-  $('#width').oninput = updateRatio; $('#height').oninput = updateRatio; $$('.button[data-scale]').forEach(button => button.onclick = () => setLongEdge(Number(button.dataset.scale)));
-  $('#rotate-left').onclick = () => { state.pendingRotation -= 90; toast('已加入左转，点击“应用尺寸与方向”确认。'); };
-  $('#rotate-right').onclick = () => { state.pendingRotation += 90; toast('已加入右转，点击“应用尺寸与方向”确认。'); };
-  $('#flip').onclick = () => { state.pendingFlip = !state.pendingFlip; toast('已切换镜像，点击“应用尺寸与方向”确认。'); };
-  $('#apply-size').onclick = () => { applySize(); scheduleEstimate(); };
+  $('#width').oninput = updateRatio; $('#height').oninput = updateRatio;
+  ['width', 'height'].forEach(id => {
+    $(`#${id}`).addEventListener('change', () => applyDimensions());
+    $(`#${id}`).addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); applyDimensions(); } });
+  });
+  $$('.button[data-scale]').forEach(button => button.onclick = () => setLongEdge(Number(button.dataset.scale)));
+  $('#rotate-left').onclick = () => rotateBy(-90);
+  $('#rotate-right').onclick = () => rotateBy(90);
+  $('#flip').onclick = flipHorizontal;
   $('#undo').onclick = () => { undo(); scheduleEstimate(); };
   $('#redo').onclick = () => { redo(); scheduleEstimate(); };
   $('#export').onclick = exportCurrent; $('#export-batch').onclick = exportBatch; $('#export-zip').onclick = exportZip;
@@ -377,7 +467,14 @@ function bindEvents() {
   $('#privacy').onclick = () => dialog('隐私说明', '<p><strong>本地功能：</strong>导入、缩放、旋转、转换和导出均在当前浏览器内完成；我们不接收或保存图片。</p><p><strong>可选云端 AI：</strong>若未来启用豆包增强，图片会被发送到你选择的服务。它必须是独立开关、先说明再同意，且不使用部署在前端的共享密钥。</p>');
   $('#ai-info').onclick = () => dialog('关于豆包 AI 的更好用法', '<p>豆包的生成式增强擅长补足模糊细节、重绘被遮挡区域，因而比本地锐化更适合复杂去水印。这是云端生成式编辑，不应承诺“与原图完全一致”，也不应处理无权修改的内容。</p><p>建议的后续方案：保留本地发布工作台作为默认；AI 采用独立“发送到豆包”步骤，展示发送提示、结果前后对比和“保留/丢弃”选择。密钥应由用户临时输入，或经你确认后使用有配额、鉴权和隐私条款的服务端代理。</p>');
   $('#dialog-backdrop').onclick = event => { if (event.target === $('#dialog-backdrop') || event.target.dataset.close !== undefined) closeDialog(); };
-  document.addEventListener('keydown', event => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redo() : undo(); } if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') { event.preventDefault(); exportCurrent(); } if (event.key === 'Escape') closeDialog(); });
+  document.addEventListener('keydown', event => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redo() : undo(); scheduleEstimate(); }
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') { event.preventDefault(); exportCurrent(); }
+    if (event.key === 'Escape') {
+      if (state.crop) { state.crop = null; $('#crop-overlay').classList.add('hidden'); $('#edit-crop').textContent = '调整'; }
+      closeDialog();
+    }
+  });
   const dropzone = $('#dropzone'); ['dragenter','dragover'].forEach(type => dropzone.addEventListener(type, event => { event.preventDefault(); dropzone.classList.add('dragover'); })); ['dragleave','drop'].forEach(type => dropzone.addEventListener(type, event => { event.preventDefault(); dropzone.classList.remove('dragover'); })); dropzone.addEventListener('drop', event => openFiles(event.dataTransfer.files, !state.source)); dropzone.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') $('#file-input').click(); });
   document.addEventListener('paste', event => { const files = [...event.clipboardData.files].filter(file => file.type.startsWith('image/')); if (files.length) openFiles(files, !state.source); });
   setupPanZoom(); setupCrop(); renderQueue(); setControls(); syncCompressUi();
