@@ -24,11 +24,34 @@ function setControls() {
   $('#undo').disabled = !state.history.length; $('#redo').disabled = !state.future.length;
   $('#export').disabled = !ready; $('#apply-size').disabled = !ready;
 }
+function stageSize() {
+  const stage = $('#stage');
+  const style = getComputedStyle(stage);
+  const padX = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+  const padY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+  return {
+    width: Math.max(0, stage.clientWidth - padX),
+    height: Math.max(0, stage.clientHeight - padY),
+  };
+}
+function fitScale() {
+  if (!state.source) return 1;
+  const { width, height } = stageSize();
+  if (width < 1 || height < 1) return 1;
+  return Math.min(1, width / state.source.width, height / state.source.height);
+}
+function resetView() {
+  state.view = { scale: 1, x: 0, y: 0 };
+  draw();
+}
 function draw() {
   if (!state.source) return;
   canvas.width = state.source.width; canvas.height = state.source.height;
   ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(state.source, 0, 0);
-  canvas.style.transform = `translate(${state.view.x}px,${state.view.y}px) scale(${state.view.scale})`;
+  const display = fitScale() * state.view.scale;
+  canvas.style.width = `${Math.max(1, Math.round(state.source.width * display))}px`;
+  canvas.style.height = `${Math.max(1, Math.round(state.source.height * display))}px`;
+  canvas.style.transform = `translate(${state.view.x}px,${state.view.y}px)`;
   $('#image-info').textContent = `${canvas.width} × ${canvas.height} px`;
   $('#width').value = canvas.width; $('#height').value = canvas.height;
 }
@@ -43,12 +66,13 @@ function pushHistory() {
   while (total > MAX_HISTORY_BYTES && state.history.length > 1) { const removed = state.history.shift(); total -= removed.width * removed.height * 4; }
   setControls();
 }
-function restore(next, target) { target.push(cloneCanvas(state.source)); state.source = next; state.view = { scale:1, x:0, y:0 }; draw(); setControls(); }
+function restore(next, target) { target.push(cloneCanvas(state.source)); state.source = next; resetView(); setControls(); }
 function undo() { if (state.history.length) restore(state.history.pop(), state.future); }
 function redo() { if (state.future.length) restore(state.future.pop(), state.history); }
 function setSource(source, name) {
-  state.source = source; state.originalName = baseName(name); state.history = []; state.future = []; state.batch = []; state.pendingRotation = 0; state.pendingFlip = false; state.view = { scale:1, x:0, y:0 };
-  $('#upload').classList.add('hidden'); draw(); setControls(); scheduleEstimate();
+  state.source = source; state.originalName = baseName(name); state.history = []; state.future = []; state.batch = []; state.pendingRotation = 0; state.pendingFlip = false;
+  $('#upload').classList.add('hidden');
+  requestAnimationFrame(() => { resetView(); setControls(); scheduleEstimate(); });
 }
 async function decode(file) {
   if (!file || !/^image\/(jpeg|png|webp)$/i.test(file.type)) throw new Error('请选择 JPEG、PNG 或 WebP 图片。');
@@ -97,7 +121,8 @@ function applySize() {
   if (!Number.isFinite(width) || !Number.isFinite(height) || width < 1 || height < 1 || width > 16000 || height > 16000) return toast('尺寸需要在 1 到 16000 px 之间。', 'error');
   pushHistory(); const rotated = resizeCanvas(state.source, Math.round(width), Math.round(height), state.pendingRotation, state.pendingFlip);
   state.source = cropRectToCanvas(rotated, state.crop);
-  state.pendingRotation = 0; state.pendingFlip = false; state.crop = null; $('#crop-overlay').classList.add('hidden'); state.view = { scale:1, x:0, y:0 }; draw(); setControls(); toast('尺寸与方向已应用。', 'success');
+  state.pendingRotation = 0; state.pendingFlip = false; state.crop = null; $('#crop-overlay').classList.add('hidden');
+  requestAnimationFrame(() => { resetView(); setControls(); toast('尺寸与方向已应用。', 'success'); });
 }
 function updateRatio(event) {
   if (!state.source || !$('#lock-ratio').checked) return;
@@ -307,10 +332,26 @@ function dialog(title, body) {
 }
 function closeDialog() { $('#dialog-backdrop').classList.remove('open'); }
 function setupPanZoom() {
-  canvas.addEventListener('wheel', event => { if (!state.source) return; event.preventDefault(); const next = state.view.scale * (event.deltaY < 0 ? 1.1 : .9); state.view.scale = Math.max(.5, Math.min(4, next)); draw(); }, { passive:false });
+  canvas.addEventListener('wheel', event => {
+    if (!state.source) return;
+    event.preventDefault();
+    state.view.scale = Math.max(0.25, Math.min(6, state.view.scale * (event.deltaY < 0 ? 1.1 : 0.9)));
+    draw();
+  }, { passive: false });
+  canvas.addEventListener('dblclick', event => { if (!state.source) return; event.preventDefault(); resetView(); });
   canvas.addEventListener('pointerdown', event => { canvas.setPointerCapture(event.pointerId); state.pointers.set(event.pointerId, { x:event.clientX, y:event.clientY }); });
-  canvas.addEventListener('pointermove', event => { const previous = state.pointers.get(event.pointerId); if (!previous) return; state.view.x += event.clientX - previous.x; state.view.y += event.clientY - previous.y; state.pointers.set(event.pointerId, { x:event.clientX, y:event.clientY }); draw(); });
+  canvas.addEventListener('pointermove', event => {
+    const previous = state.pointers.get(event.pointerId); if (!previous) return;
+    state.view.x += event.clientX - previous.x; state.view.y += event.clientY - previous.y;
+    state.pointers.set(event.pointerId, { x:event.clientX, y:event.clientY }); draw();
+  });
   ['pointerup','pointercancel'].forEach(type => canvas.addEventListener(type, event => state.pointers.delete(event.pointerId)));
+  if (typeof ResizeObserver !== 'undefined') {
+    const observer = new ResizeObserver(() => { if (state.source) draw(); });
+    observer.observe($('#stage'));
+  } else {
+    window.addEventListener('resize', () => { if (state.source) draw(); });
+  }
 }
 function setupCrop() { const overlay=$('#crop-overlay'); $('#edit-crop').onclick=()=>resetCrop(); $('#crop-ratio').onchange=()=>state.crop&&resetCrop(); overlay.addEventListener('pointerdown',event=>{ if(!state.crop)return; const rect=overlay.getBoundingClientRect(), handle=event.target.dataset.handle; state.cropDrag={handle,startX:event.clientX,startY:event.clientY,rect:{...state.crop},width:rect.width,height:rect.height}; overlay.setPointerCapture(event.pointerId); }); overlay.addEventListener('pointermove',event=>{ const drag=state.cropDrag;if(!drag)return; const dx=(event.clientX-drag.startX)/drag.width,dy=(event.clientY-drag.startY)/drag.height; let {x,y,w,h}=drag.rect;if(!drag.handle){x=Math.max(0,Math.min(1-w,x+dx));y=Math.max(0,Math.min(1-h,y+dy));}else{if(drag.handle.includes('w')){x=Math.max(0,Math.min(x+w-.05,x+dx));w=drag.rect.w-(x-drag.rect.x);}if(drag.handle.includes('e'))w=Math.max(.05,Math.min(1-x,w+dx));if(drag.handle.includes('n')){y=Math.max(0,Math.min(y+h-.05,y+dy));h=drag.rect.h-(y-drag.rect.y);}if(drag.handle.includes('s'))h=Math.max(.05,Math.min(1-y,h+dy));}state.crop={x,y,w,h};renderCrop();}); ['pointerup','pointercancel'].forEach(type=>overlay.addEventListener(type,()=>state.cropDrag=null)); }
 function bindEvents() {
