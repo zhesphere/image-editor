@@ -14,6 +14,13 @@
   <title>图片发布工具 · Orbitvo Tools</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
+  <style>
+    html,body{margin:0;min-width:320px;background:#f6f7fb;color:#182033}
+    @media (prefers-color-scheme:dark){html,body{background:#111521;color:#edf1fa}}
+    .hidden{display:none!important}
+    #upload{position:fixed;inset:0;z-index:5;display:grid;place-items:center;padding:24px;background:inherit}
+    body:has(#upload:not(.hidden)) .shell{visibility:hidden;pointer-events:none}
+  </style>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -62,6 +69,10 @@
   <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
   <div id="dialog-backdrop" class="dialog-backdrop" role="presentation"><section id="dialog" class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title"></section></div><div id="toasts" class="toast-region" aria-live="polite" aria-atomic="true"></div>
   <script type="module" src="app.js"></script>
-  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});</script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').then(reg => reg.update()).catch(() => {});
+    }
+  </script>
 </body>
 </html>
