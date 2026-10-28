@@ -273,7 +273,7 @@ function syncCompressUi() {
 }
 function renderQueue() {
   const root = $('#queue'); root.replaceChildren();
-  if (!state.batch.length) { root.innerHTML = '<p class="hint">暂无批量图片。多选或继续添加后，可按当前压缩设置一次性导出。</p>'; return; }
+  if (!state.batch.length) { root.innerHTML = '<p class="hint tight">暂无队列。可多选图片批量压缩。</p>'; return; }
   state.batch.forEach((item, index) => {
     const row = document.createElement('div'); row.className = 'queue-item';
     const readyMeta = `${item.canvas.width} × ${item.canvas.height} · 原 ${bytes(item.file.size)}`;

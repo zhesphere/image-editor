@@ -31,29 +31,33 @@
     <section class="workspace" aria-label="图片工作台">
       <div class="canvas-stage" id="stage"><div class="canvas-wrap"><canvas id="canvas" aria-label="图片预览。默认适应窗口；滚轮缩放，拖动平移，双击恢复适应。"></canvas><div id="crop-overlay" class="crop-overlay hidden" aria-label="拖动裁剪区域调整取景"><div id="crop-box" class="crop-box"><span class="crop-handle nw" data-handle="nw"></span><span class="crop-handle ne" data-handle="ne"></span><span class="crop-handle sw" data-handle="sw"></span><span class="crop-handle se" data-handle="se"></span></div></div></div></div>
       <aside class="panel" aria-label="编辑设置">
-        <section class="section"><h2>发布处理</h2><p class="hint">先确定尺寸，再选择格式和质量。修改只在你点击应用时写入历史。</p><h3>尺寸与方向</h3>
-          <div class="field-row"><label class="field">宽度（px）<input id="width" type="number" min="1" inputmode="numeric"></label><label class="field">高度（px）<input id="height" type="number" min="1" inputmode="numeric"></label></div>
-          <label class="field"><span><input id="lock-ratio" type="checkbox" checked> 锁定比例</span></label><div class="button-row"><button class="button" data-scale="1080">长边 1080</button><button class="button" data-scale="1920">长边 1920</button></div>
-          <label class="field">居中裁剪比例<select id="crop-ratio"><option value="free">不裁剪</option><option value="1">1 : 1</option><option value="1.333333">4 : 3</option><option value="1.777778">16 : 9</option><option value=".5625">9 : 16</option></select></label><button id="edit-crop" class="button">在画布中调整裁剪区域</button>
-          <div class="button-row" style="margin-top:8px"><button id="rotate-left" class="button">↺ 左转</button><button id="rotate-right" class="button">右转 ↻</button><button id="flip" class="button">↔ 镜像</button></div><button id="apply-size" class="button primary" style="width:100%;margin-top:10px">应用尺寸与方向</button>
+        <section class="section">
+          <div class="section-head"><h2>尺寸</h2><label class="check" title="锁定宽高比"><input id="lock-ratio" type="checkbox" checked><span>锁定比例</span></label></div>
+          <div class="field-row compact"><label class="field">宽<input id="width" type="number" min="1" inputmode="numeric"></label><label class="field">高<input id="height" type="number" min="1" inputmode="numeric"></label></div>
+          <div class="button-row tight"><button type="button" class="button small" data-scale="1080">长边 1080</button><button type="button" class="button small" data-scale="1920">长边 1920</button></div>
+          <div class="inline-row"><label class="field grow">裁剪<select id="crop-ratio"><option value="free">不裁剪</option><option value="1">1 : 1</option><option value="1.333333">4 : 3</option><option value="1.777778">16 : 9</option><option value=".5625">9 : 16</option></select></label><button type="button" id="edit-crop" class="button small">调整</button></div>
+          <div class="button-row tight"><button type="button" id="rotate-left" class="button small">↺ 左转</button><button type="button" id="rotate-right" class="button small">右转 ↻</button><button type="button" id="flip" class="button small">↔ 镜像</button></div>
+          <button type="button" id="apply-size" class="button primary block">应用尺寸与方向</button>
         </section>
-        <section class="section"><h2>导出设置</h2>
-          <label class="field">格式<select id="format"><option value="image/jpeg">JPEG · 通用照片</option><option value="image/webp">WebP · 更小体积</option><option value="image/png">PNG · 透明/无损</option></select></label>
-          <label class="field">压缩方式<select id="compress-mode"><option value="quality">按质量百分比</option><option value="size">按目标文件大小</option></select></label>
+        <section class="section">
+          <h2>导出</h2>
+          <div class="inline-row"><label class="field grow">格式<select id="format"><option value="image/jpeg">JPEG</option><option value="image/webp">WebP</option><option value="image/png">PNG</option></select></label><label class="field grow">压缩<select id="compress-mode"><option value="quality">按质量</option><option value="size">按大小</option></select></label></div>
           <label class="field" id="quality-field">质量 <span class="range-line"><input id="quality" type="range" min="40" max="100" value="82"><output id="quality-value">82</output>%</span></label>
           <div id="size-field" class="hidden">
-            <label class="field">目标大小 <span class="range-line"><input id="target-size" type="range" min="50" max="2000" step="10" value="200"><output id="target-size-value">200</output> KB</span></label>
-            <div class="button-row presets" id="size-presets"><button type="button" class="button small" data-kb="100">100 KB</button><button type="button" class="button small" data-kb="200">200 KB</button><button type="button" class="button small" data-kb="500">500 KB</button><button type="button" class="button small" data-kb="1024">1 MB</button></div>
-            <p class="hint">适用于表单上传上限。会优先降质量，仍超限再等比缩小尺寸。</p>
+            <label class="field">目标 <span class="range-line"><input id="target-size" type="range" min="50" max="2000" step="10" value="200"><output id="target-size-value">200</output> KB</span></label>
+            <div class="button-row tight presets" id="size-presets"><button type="button" class="button small" data-kb="100">100</button><button type="button" class="button small" data-kb="200">200</button><button type="button" class="button small" data-kb="500">500</button><button type="button" class="button small" data-kb="1024">1MB</button></div>
           </div>
-          <label class="field" id="background-field">JPEG 背景色<input id="background" type="color" value="#ffffff"></label>
-          <p id="export-estimate" class="hint">调整设置后会估算导出大小。</p>
+          <div class="inline-row" id="background-field"><span class="muted-label">JPEG 背景</span><input id="background" type="color" value="#ffffff" aria-label="JPEG 背景色"></div>
+          <p id="export-estimate" class="hint tight">调整后会估算大小</p>
         </section>
-        <section class="section"><h2>批量压缩</h2><p class="hint">多图队列沿用当前格式、质量或目标大小；首张在画布编辑，其余一并压缩。仅本机处理。</p><div class="button-row"><button id="add-batch" class="button">添加图片</button><button id="export-batch" class="button primary">逐张导出</button></div><button id="export-zip" class="button" style="width:100%;margin-top:8px">打包为 ZIP 下载</button><div id="queue" class="queue" aria-live="polite" style="margin-top:10px"></div></section>
-        <section class="section"><h2>可选云端 AI</h2><p class="hint">豆包适合生成式清晰化与复杂遮挡修复，但它不是本地处理。首发不默认发送你的图片。</p><button id="ai-info" class="button">查看 AI 使用方式</button></section>
+        <section class="section last">
+          <h2>批量</h2>
+          <div class="button-row tight"><button type="button" id="add-batch" class="button small">添加</button><button type="button" id="export-batch" class="button small primary">逐张导出</button><button type="button" id="export-zip" class="button small">ZIP</button></div>
+          <div id="queue" class="queue" aria-live="polite"></div>
+        </section>
       </aside>
     </section>
-    <footer class="footer"><span>Orbitvo Tools · 图片不默认上传，不保存原图。</span><button id="privacy" class="button small">隐私说明</button></footer>
+    <footer class="footer"><span>Orbitvo Tools · 图片不默认上传</span><div class="footer-actions"><button type="button" id="ai-info" class="button small">关于 AI</button><button type="button" id="privacy" class="button small">隐私说明</button></div></footer>
   </main>
   <section id="upload" class="upload" aria-label="导入图片"><div id="dropzone" class="upload-card" tabindex="0" role="button" aria-label="选择或拖放图片"><div class="upload-icon">↥</div><h1>图片发布工具</h1><p>裁剪、缩放、压到指定 KB、格式转换与批量压缩。<br>拖入图片，点击选择，或直接粘贴截图。</p><button id="choose" class="button primary">选择图片</button><div class="privacy-badge">✓ 本地处理默认不上传</div></div></section>
   <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>

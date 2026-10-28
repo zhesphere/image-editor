@@ -1,4 +1,4 @@
-const CACHE = 'orbitvo-image-tool-v3';
+const CACHE = 'orbitvo-image-tool-v4';
 const ASSETS = ['./', './index.html', './styles.css', './app.js', './favicon.svg', './manifest.webmanifest', './privacy.html'];
 
 self.addEventListener('install', event => {
