@@ -20,7 +20,9 @@
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; background: var(--bg); color: var(--ink); }
+html, body { margin: 0; min-width: 320px; background: var(--bg); color: var(--ink); }
+body:has(#upload:not(.hidden)) { overflow: hidden; height: 100dvh; }
+body:has(#upload:not(.hidden)) .shell { visibility: hidden; pointer-events: none; }
 button, input, select { font: inherit; }
 button { border: 0; cursor: pointer; }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid color-mix(in srgb, var(--brand) 42%, transparent); outline-offset: 2px; }
@@ -62,7 +64,7 @@ input[type="range"] { padding:0; accent-color:var(--brand); }
 .button-row { display:flex; gap:8px; flex-wrap:wrap; }
 .button-row > .button { flex:1; }
 .hint { color:var(--muted); font-size:12px; line-height:1.55; }
-.upload { position:absolute; inset:0; display:grid; place-items:center; padding:24px; background:var(--bg); z-index:5; }
+.upload { position:fixed; inset:0; display:grid; place-items:center; padding:24px; background:var(--bg); z-index:5; }
 .upload-card { max-width:580px; width:100%; text-align:center; padding:44px 28px; border:2px dashed var(--line); border-radius:22px; background:var(--surface); box-shadow:var(--shadow); }
 .upload-card.dragover { border-color:var(--brand); background:color-mix(in srgb, var(--brand) 6%, var(--surface)); }
 .upload-icon { display:grid; place-items:center; width:56px; height:56px; border-radius:18px; margin:0 auto 18px; color:white; background:linear-gradient(125deg,var(--brand),var(--brand-2)); font-size:27px; }
