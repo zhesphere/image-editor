@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://img.orbitvo.com/sitemap.xml

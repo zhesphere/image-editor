@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>转换与编辑 · Orbitvo Tools</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles/main.css">
+  <style>
+    .crop-overlay { position:absolute; inset:0; background:rgba(8,12,20,.45); touch-action:none; }
+    .crop-box { position:absolute; border:2px solid #fff; cursor:move; }
+    .crop-handle { position:absolute; width:14px; height:14px; background:#fff; border:2px solid var(--accent); border-radius:50%; transform:translate(-50%,-50%); }
+    .crop-handle.nw{left:0;top:0}.crop-handle.ne{left:100%;top:0}.crop-handle.sw{left:0;top:100%}.crop-handle.se{left:100%;top:100%}
+    .canvas-wrap { position:relative; line-height:0; box-shadow:var(--shadow); }
+  </style>
+</head>
+<body>
+  <div class="site">
+    <header class="topbar">
+      <a class="brand" href="./index.html"><span>Orbitvo</span><span class="brand-mark">Tools</span></a>
+      <nav class="nav-tools" id="nav-tools"></nav>
+      <div class="topbar-actions">
+        <button type="button" id="undo" class="button small" disabled>撤销</button>
+        <button type="button" id="redo" class="button small" disabled>重做</button>
+        <button type="button" id="export" class="button primary small" disabled>导出</button>
+      </div>
+    </header>
+    <section class="tool-page">
+      <div class="stage" id="stage">
+        <div id="empty" class="dropzone" tabindex="0" role="button">
+          <h2>转换与编辑</h2>
+          <p>改尺寸、裁剪、旋转、换格式。修改立即生效，可用撤销。</p>
+          <button type="button" class="button primary" id="choose">选择图片</button>
+        </div>
+        <div id="preview-wrap" class="canvas-wrap hidden">
+          <canvas id="canvas"></canvas>
+          <div id="crop-overlay" class="crop-overlay hidden">
+            <div id="crop-box" class="crop-box">
+              <span class="crop-handle nw" data-handle="nw"></span>
+              <span class="crop-handle ne" data-handle="ne"></span>
+              <span class="crop-handle sw" data-handle="sw"></span>
+              <span class="crop-handle se" data-handle="se"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <aside class="panel">
+        <section class="section">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <h2 style="margin:0">尺寸</h2>
+            <label class="check"><input id="lock" type="checkbox" checked><span>锁定比例</span></label>
+          </div>
+          <div class="field-row">
+            <label class="field">宽<input id="width" type="number" min="1"></label>
+            <label class="field">高<input id="height" type="number" min="1"></label>
+          </div>
+          <div class="button-row">
+            <button type="button" class="button small" data-edge="1080">长边 1080</button>
+            <button type="button" class="button small" data-edge="1920">长边 1920</button>
+          </div>
+        </section>
+        <section class="section">
+          <h2>裁剪 / 方向</h2>
+          <div class="inline-row">
+            <label class="field">比例
+              <select id="crop-ratio">
+                <option value="free">自由 / 不裁</option>
+                <option value="1">1:1</option>
+                <option value="1.333333">4:3</option>
+                <option value="1.777778">16:9</option>
+                <option value=".5625">9:16</option>
+              </select>
+            </label>
+            <button type="button" id="edit-crop" class="button small">调整</button>
+          </div>
+          <div class="button-row">
+            <button type="button" id="rot-l" class="button small">左转</button>
+            <button type="button" id="rot-r" class="button small">右转</button>
+            <button type="button" id="flip" class="button small">镜像</button>
+          </div>
+        </section>
+        <section class="section">
+          <h2>导出</h2>
+          <label class="field">格式
+            <select id="format">
+              <option value="image/jpeg">JPEG</option>
+              <option value="image/webp">WebP</option>
+              <option value="image/png">PNG</option>
+            </select>
+          </label>
+          <label class="field" id="quality-field">质量
+            <span class="range-line"><input id="quality" type="range" min="40" max="100" value="90"><output id="quality-value">90</output>%</span>
+          </label>
+          <p id="info" class="hint mono"></p>
+        </section>
+      </aside>
+    </section>
+    <footer class="footer"><span>仅在本机浏览器处理</span><a class="button small" href="./privacy.html">隐私</a></footer>
+  </div>
+  <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+  <div id="toasts" class="toast-region" aria-live="polite"></div>
+  <script type="module" src="./edit.js"></script>
+</body>
+</html>

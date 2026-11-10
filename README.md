@@ -1,57 +1,36 @@
-# Orbitvo 图片发布工具
+# Orbitvo Tools / Image
 
-面向发布前最后一步的轻量图片工具：在浏览器本地完成裁剪、缩放、旋转、压缩、格式转换和逐张批量导出。
+本地优先的图片与轻量 PDF 工具站：压缩、合并、PDF↔图片、转换编辑。默认不上传文件。
 
-## 当前能力
+线上：https://img.orbitvo.com/
 
-- 导入 JPEG、PNG、WebP：点击、拖放和粘贴截图。
-- 单图：锁定比例缩放、居中比例裁剪、旋转、镜像、撤销/重做。
-- 导出：PNG、JPEG、WebP；可按质量百分比，或按目标文件大小（如 200 KB）自动压缩；JPEG 可选背景色；导出前预估体积。
-- 目标大小：优先降低 JPEG/WebP 质量；仍超限则等比缩小尺寸，适合表单上传上限。
-- 批量：多图队列，沿用尺寸、裁剪与压缩规则；支持逐张下载或打包 ZIP。
-- 隐私：上述功能只在本地浏览器中运行，不上传或持久保存图片。
+## 工具
 
-## 云端 AI 的边界
+- **图片压缩**：MozJPEG / WebP / PNG（WASM），按质量或目标 KB，批量 ZIP
+- **图片合并**：横排 / 竖排 / 网格
+- **PDF 转图片**：pdf.js 本地渲染，可 ZIP
+- **图片转 PDF**：pdf-lib 本地生成
+- **转换与编辑**：尺寸、裁剪、旋转、格式
 
-豆包类生成式编辑适合复杂的去水印、去模糊和细节重绘，但它属于**可选云端处理**，不能与本地处理混为一谈。当前版本不内置 API Key，也不发送图片。
-
-若以后启用，必须同时满足：
-
-1. 在触发前显示图片将发送至的服务和用途，并取得一次明确同意；
-2. 使用用户临时输入的 Key，或经确认的安全服务端代理；绝不把共享密钥放进静态前端；
-3. 返回结果先提供前后对比和“保留 / 丢弃”，不覆盖用户当前图片；
-4. 不对未获授权内容作去水印承诺。
-
-## 本地运行
-
-这是无依赖静态站点；可用任何静态服务器打开 `index.html` 所在目录。例如：
+## 开发
 
 ```bash
-python3 -m http.server 4173 --directory .
+npm install
+npm run dev
 ```
-
-然后打开 `http://127.0.0.1:4173`。
-
-## 兼容与限制
-
-- 目标浏览器为近期 Chrome、Safari、Firefox、Edge。
-- 浏览器原生 Canvas 保证 PNG；JPEG/WebP 会在运行时检查实际 MIME，不支持时不会伪装为对应扩展名。
-- Canvas 导出会重绘像素，可能移除 EXIF、色彩配置和原始文件的元数据。
-- 大图受设备内存限制；历史记录总预算为约 80 MB，旧步骤会自动淘汰。
-- 批量下载由浏览器安全策略控制，首次可能需要允许多个下载。
-
-## 线上更新
-
-站点通过 **GitHub Pages** 发布，自定义域名为 [`img.orbitvo.com`](https://img.orbitvo.com/)（仓库根目录 `CNAME`）。
-
-仓库：`https://github.com/zhesphere/image-editor`
-
-更新步骤：
 
 ```bash
-git add -A
-git commit -m "说明本次改动"
-git push origin main
+npm run build   # 输出到 dist/
+npm run preview
 ```
 
-推送到 `main` 后，GitHub Pages 会自动部署；通常一两分钟内可在域名上看到新版本。若浏览器仍显示旧页面，可强制刷新或清缓存。
+推送到 `main` 后，GitHub Actions 会构建并部署 Pages。
+
+## 备份
+
+改造前快照标签：`backup-pre-multitool-20261110`  
+文件副本：`docs/archive/backup-pre-multitool-20261110/`
+
+## 隐私
+
+见 `src/privacy.html`。处理均在浏览器内完成。

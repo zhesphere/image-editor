@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="本地图片压缩：MozJPEG / WebP，可压到指定 KB，批量 ZIP。">
+  <title>图片压缩 · Orbitvo Tools</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles/main.css">
+</head>
+<body>
+  <div class="site">
+    <header class="topbar">
+      <a class="brand" href="./index.html"><span>Orbitvo</span><span class="brand-mark">Tools</span></a>
+      <nav class="nav-tools" id="nav-tools"></nav>
+      <div class="topbar-actions">
+        <button type="button" id="add-more" class="button small">添加</button>
+        <button type="button" id="download-zip" class="button primary small" disabled>ZIP 下载</button>
+      </div>
+    </header>
+    <section class="tool-page">
+      <div class="stage" id="stage">
+        <div id="empty" class="dropzone" tabindex="0" role="button" aria-label="选择或拖放图片">
+          <h2>图片压缩</h2>
+          <p>拖入 JPEG / PNG / WebP。可按质量或目标大小压缩，全部在本机完成。</p>
+          <button type="button" class="button primary" id="choose">选择图片</button>
+          <div class="privacy-chip">✓ 本地 WASM 编码 · 不上传</div>
+        </div>
+        <div id="preview-wrap" class="preview-frame hidden"><img id="preview" alt="预览"></div>
+      </div>
+      <aside class="panel">
+        <section class="section">
+          <h2>压缩</h2>
+          <div class="inline-row">
+            <label class="field">格式
+              <select id="format">
+                <option value="image/jpeg">JPEG</option>
+                <option value="image/webp">WebP</option>
+                <option value="image/png">PNG</option>
+              </select>
+            </label>
+            <label class="field">方式
+              <select id="mode">
+                <option value="size">按目标大小</option>
+                <option value="quality">按质量</option>
+              </select>
+            </label>
+          </div>
+          <label class="field" id="quality-field">质量
+            <span class="range-line"><input id="quality" type="range" min="40" max="100" value="82"><output id="quality-value">82</output>%</span>
+          </label>
+          <div id="size-field">
+            <label class="field">目标
+              <span class="range-line"><input id="target" type="range" min="50" max="2000" step="10" value="200"><output id="target-value">200</output> KB</span>
+            </label>
+            <div class="button-row" id="presets">
+              <button type="button" class="button small" data-kb="100">100</button>
+              <button type="button" class="button small" data-kb="200">200</button>
+              <button type="button" class="button small" data-kb="500">500</button>
+              <button type="button" class="button small" data-kb="1024">1MB</button>
+            </div>
+          </div>
+          <div id="result" class="result-bar hidden"></div>
+          <button type="button" id="run" class="button primary block" disabled>开始压缩</button>
+        </section>
+        <section class="section">
+          <h2>队列</h2>
+          <div id="queue" class="queue"><p class="hint">尚未添加图片。</p></div>
+        </section>
+      </aside>
+    </section>
+    <footer class="footer"><span>仅在本机浏览器处理</span><a class="button small" href="./privacy.html">隐私</a></footer>
+  </div>
+  <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
+  <div id="toasts" class="toast-region" aria-live="polite"></div>
+  <script type="module" src="./compress.js"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>PDF 转图片 · Orbitvo Tools</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles/main.css">
+</head>
+<body>
+  <div class="site">
+    <header class="topbar">
+      <a class="brand" href="./index.html"><span>Orbitvo</span><span class="brand-mark">Tools</span></a>
+      <nav class="nav-tools" id="nav-tools"></nav>
+      <div class="topbar-actions"><button type="button" id="zip" class="button primary small" disabled>ZIP 下载</button></div>
+    </header>
+    <section class="tool-page">
+      <div class="stage" id="stage">
+        <div id="empty" class="dropzone" tabindex="0" role="button">
+          <h2>PDF 转图片</h2>
+          <p>在本机解析 PDF，按页导出为图片。文件不会上传。</p>
+          <button type="button" class="button primary" id="choose">选择 PDF</button>
+        </div>
+        <div id="preview-wrap" class="preview-frame hidden"><canvas id="preview"></canvas></div>
+      </div>
+      <aside class="panel">
+        <section class="section">
+          <h2>导出</h2>
+          <label class="field">清晰度
+            <select id="scale">
+              <option value="1">72 DPI 相当</option>
+              <option value="1.5">约 108 DPI</option>
+              <option value="2" selected>约 144 DPI</option>
+              <option value="2.5">约 180 DPI</option>
+            </select>
+          </label>
+          <label class="field">格式
+            <select id="format">
+              <option value="image/png">PNG</option>
+              <option value="image/jpeg">JPEG</option>
+              <option value="image/webp">WebP</option>
+            </select>
+          </label>
+          <div class="progress hidden" id="progress"><span></span></div>
+          <button type="button" id="convert" class="button primary block" disabled>开始转换</button>
+        </section>
+        <section class="section">
+          <h2>页面</h2>
+          <div id="pages" class="queue"><p class="hint">尚未选择 PDF。</p></div>
+        </section>
+      </aside>
+    </section>
+    <footer class="footer"><span>pdf.js 本地渲染</span><a class="button small" href="./privacy.html">隐私</a></footer>
+  </div>
+  <input id="file-input" type="file" accept="application/pdf" hidden>
+  <div id="toasts" class="toast-region" aria-live="polite"></div>
+  <script type="module" src="./pdf-to-image.js"></script>
+</body>
+</html>
