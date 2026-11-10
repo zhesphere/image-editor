@@ -1,0 +1,10 @@
+{
+  "name": "Orbitvo 图片发布工具",
+  "short_name": "图片工具",
+  "description": "本地优先的图片裁剪、缩放、压缩、转换与批量导出工具。",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f7fb",
+  "theme_color": "#5267e8",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
