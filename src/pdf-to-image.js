@@ -3,9 +3,11 @@ import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { $, toast, downloadBlob, baseName, extensionForMime, bytes } from './shared/util.js';
 import { makeZip } from './shared/zip.js';
 import { renderToolNav, wireDropzone } from './shared/shell.js';
+import { mountThemeToggle } from './shared/theme.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 $('#nav-tools').innerHTML = renderToolNav('pdf-to-image');
+mountThemeToggle();
 
 let pdfDoc = null;
 let pdfName = 'document';

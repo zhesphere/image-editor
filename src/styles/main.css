@@ -1,10 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
-:root {
-  color-scheme: light dark;
-  --bg: #f3f5f8;
+:root,
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f4f6fa;
   --surface: #ffffff;
-  --surface-2: #e8edf5;
+  --surface-2: #e9eef6;
   --ink: #152033;
   --muted: #5c6b84;
   --line: #d5dde8;
@@ -14,20 +15,44 @@
   --danger: #b8324a;
   --radius: 12px;
   --shadow: 0 10px 28px rgba(21, 32, 51, .08);
+  --stage-glow: color-mix(in srgb, var(--accent) 10%, transparent);
   --font: "IBM Plex Sans", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, monospace;
   font-family: var(--font);
 }
 
+html[data-theme="dark"] {
+  color-scheme: dark;
+  /* Brighter charcoal — less cave, more workshop */
+  --bg: #222938;
+  --surface: #2c3446;
+  --surface-2: #3a4458;
+  --ink: #f2f5fb;
+  --muted: #b4c0d4;
+  --line: #4a556c;
+  --accent: #6b8cff;
+  --accent-ink: #0f1420;
+  --ok: #3dbe8c;
+  --danger: #f07187;
+  --shadow: 0 12px 28px rgba(0, 0, 0, .28);
+  --stage-glow: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f131c;
-    --surface: #171d2a;
-    --surface-2: #222a3b;
-    --ink: #e8edf7;
-    --muted: #9aa8c0;
-    --line: #2e3a52;
-    --shadow: 0 12px 32px rgba(0, 0, 0, .35);
+  html:not([data-theme]) {
+    color-scheme: dark;
+    --bg: #222938;
+    --surface: #2c3446;
+    --surface-2: #3a4458;
+    --ink: #f2f5fb;
+    --muted: #b4c0d4;
+    --line: #4a556c;
+    --accent: #6b8cff;
+    --accent-ink: #0f1420;
+    --ok: #3dbe8c;
+    --danger: #f07187;
+    --shadow: 0 12px 28px rgba(0, 0, 0, .28);
+    --stage-glow: color-mix(in srgb, var(--accent) 16%, transparent);
   }
 }
 
@@ -199,9 +224,10 @@ a { color: inherit; }
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 42%),
+    radial-gradient(circle at 50% 20%, var(--stage-glow), transparent 42%),
     var(--bg);
 }
+.theme-toggle { min-width: 3.2em; }
 .panel {
   min-height: 0;
   overflow: auto;

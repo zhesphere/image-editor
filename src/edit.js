@@ -1,7 +1,9 @@
 import { $, $$, toast, downloadBlob, fileToBitmap, bitmapToCanvas, baseName, extensionForMime, bytes } from './shared/util.js';
 import { renderToolNav, wireDropzone } from './shared/shell.js';
+import { mountThemeToggle } from './shared/theme.js';
 
 $('#nav-tools').innerHTML = renderToolNav('edit');
+mountThemeToggle();
 
 const canvas = $('#canvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });

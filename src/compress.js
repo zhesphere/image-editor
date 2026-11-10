@@ -2,8 +2,10 @@ import { compressImageData } from './shared/encode.js';
 import { $, bytes, baseName, toast, downloadBlob, fileToBitmap, bitmapToCanvas, canvasToImageData, extensionForMime } from './shared/util.js';
 import { makeZip } from './shared/zip.js';
 import { renderToolNav, wireDropzone } from './shared/shell.js';
+import { mountThemeToggle } from './shared/theme.js';
 
 $('#nav-tools').innerHTML = renderToolNav('compress');
+mountThemeToggle();
 
 const items = [];
 

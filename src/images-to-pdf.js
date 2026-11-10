@@ -1,8 +1,10 @@
 import { PDFDocument } from 'pdf-lib';
 import { $, toast, downloadBlob, fileToBitmap, bitmapToCanvas, baseName, bytes } from './shared/util.js';
 import { renderToolNav, wireDropzone } from './shared/shell.js';
+import { mountThemeToggle } from './shared/theme.js';
 
 $('#nav-tools').innerHTML = renderToolNav('images-to-pdf');
+mountThemeToggle();
 
 const items = [];
 let pdfBytes = null;

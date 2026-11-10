@@ -1,7 +1,9 @@
 import { $, toast, downloadBlob, fileToBitmap, bitmapToCanvas, extensionForMime, baseName } from './shared/util.js';
 import { renderToolNav, wireDropzone } from './shared/shell.js';
+import { mountThemeToggle } from './shared/theme.js';
 
 $('#nav-tools').innerHTML = renderToolNav('merge');
+mountThemeToggle();
 
 const items = [];
 let merged = null;

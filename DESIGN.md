@@ -4,14 +4,10 @@
 Quiet professional utility. Ink on paper-blue surfaces, one decisive accent. Feels like a workshop bench, not a marketing landing page.
 
 ## Color
-- `--bg: #f3f5f8` / dark `#0f131c`
-- `--surface: #ffffff` / dark `#171d2a`
-- `--ink: #152033` / dark `#e8edf7`
-- `--muted: #5c6b84`
-- `--line: #d5dde8`
-- `--accent: #2f5bff` (single brand blue; no purple gradient hero)
-- `--ok: #1f7a57`
-- `--danger: #b8324a`
+- Light: `--bg #f4f6fa`, `--surface #fff`, `--ink #152033`, `--accent #2f5bff`
+- Dark (brighter workshop charcoal): `--bg #222938`, `--surface #2c3446`, `--surface-2 #3a4458`, `--ink #f2f5fb`, `--muted #b4c0d4`, `--line #4a556c`, `--accent #6b8cff`
+- Theme toggle in topbar; preference in `localStorage` key `orbitvo-theme`
+- No purple gradient hero
 
 ## Type
 - UI: `"IBM Plex Sans", "PingFang SC", "Noto Sans SC", system-ui, sans-serif`
